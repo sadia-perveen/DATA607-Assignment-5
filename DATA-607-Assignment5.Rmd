@@ -1,0 +1,70 @@
+---
+title: "Assignment5_Data607"
+author: "Sadia Perveen"
+date: "9/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+install.packages("tidyr", repos = "http://cran.us.r-project.org")
+install.packages("dplyr", repos = "http://cran.us.r-project.org")
+
+require(tidyr)
+require(dplyr)
+```
+Read the file in from github using read.csv
+
+```{r}
+csvFile <- "https://raw.githubusercontent.com/sadia-perveen/DATA607-Assignment-5/master/ArrivalDelays.csv"
+aD <- readr::read_csv(csvFile)
+aD
+```
+
+Clean up the data:
+1. Assign proper columns names from column 1 and 2.
+2. Get rid of the empty rows.
+3. Populate the proper airlines in row 2 and 4.
+```{r}
+names(aD)[1] <- "Airline"
+names(aD)[2] <- "Status"
+aD
+aD <- aD[rowSums(is.na(aD)) != ncol(aD), ]
+aD
+aD$Airline[2] <- "ALASKA"
+aD$Airline[4] <- "AM WEST"
+aD
+```
+
+Use the tidyr pivot_longer function to conver data from wide to long. 
+The follow code will take our data aD, and convert all variables except Airline and Status to rows.
+
+```{r}
+aD <- pivot_longer(aD, -c("Airline", "Status"), names_to = "Location", values_to = "NumFlights")
+aD
+```
+
+Now we can start doing some data comparison.
+
+1. We group our data aD by Airline and Status, summarising the total number of flight, by summing the NumFlights column based on the grouping.
+2. Then we spread out our data, based on Status and total flights for a more asthetic look, this will also allow for us to easily get the total delayed and total on time percentatges for our airlines.
+3.We convert our delayed and on time columns as numericals to conduct arithmetic operations.
+4. Finally we get the total onTimePercantage and delayedPercentage. 
+5. The final result shows us total onTime and Delayed percantage for both our Airline so we can easily compare the two.
+```{r}
+statusTotals <- data.frame(aD %>% group_by(Airline, Status) %>% summarise(totalFlights = sum(NumFlights)))
+
+statusTotals <- statusTotals %>% spread(Status, totalFlights)
+
+statusTotals$delayed <- as.numeric(statusTotals$delayed)
+
+statusTotals$`on time` <- as.numeric(statusTotals$`on time`)
+
+statusTotals$onTimePercentage <- statusTotals$`on time`/(statusTotals$`on time` + statusTotals$delayed) * 100
+statusTotals$delayedPercentage <- statusTotals$delayed/(statusTotals$`on time` + statusTotals$delayed) * 100
+
+statusTotals
+```
+
